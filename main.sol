@@ -34,3 +34,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
     error BCH_ZeroAddress();
     error BCH_ZeroAmount();
     error BCH_Paused();
+    error BCH_NotKeeper();
+    error BCH_NotOracle();
+    error BCH_InvalidPhase();
+    error BCH_ScoreOutOfRange();
+    error BCH_RiskLevelOutOfRange();
+    error BCH_TransferFailed();
+    error BCH_AssessmentNotFound();
+    error BCH_InsufficientFee();
+    error BCH_ThresholdInvalid();
+    error BCH_MaxAssessmentsPerSubmitter();
+
+    uint256 public constant BCH_SCORE_SCALE = 10000;
+    uint256 public constant BCH_MAX_PHASES = 8;
+    uint256 public constant BCH_MAX_RISK_LEVEL = 10;
+    uint256 public constant BCH_MAX_ASSESSMENTS_PER_SUBMITTER = 256;
+    uint256 public constant BCH_CYCLE_SEED = 0xBe4c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f;
+
+    uint8 public constant BCH_PHASE_ACCUMULATION = 1;
+    uint8 public constant BCH_PHASE_MARKUP = 2;
+    uint8 public constant BCH_PHASE_DISTRIBUTION = 3;
+    uint8 public constant BCH_PHASE_MARKDOWN = 4;
+
+    address public immutable bchTreasury;
+    address public immutable bchOracleRole;
+    uint256 public immutable deployBlock;
+    bytes32 public immutable chainSalt;
+
+    address public bchKeeper;
+    address public bchOracle;
+    uint256 public submissionFeeWei;
+    bool public bchPaused;
+    uint256 public assessmentCounter;
+    uint256 public treasuryBalance;
+
+    struct CycleAssessment {
+        address submitter;
