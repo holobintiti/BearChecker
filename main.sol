@@ -502,3 +502,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
         uint256 n = assessmentIds.length;
         views = new AssessmentView[](n);
         for (uint256 i = 0; i < n; i++) {
+            uint256 aid = assessmentIds[i];
+            CycleAssessment storage a = assessments[aid];
+            views[i] = AssessmentView({
+                assessmentId: aid,
+                submitter: a.submitter,
+                phaseId: a.phaseId,
+                bearScore: a.bearScore,
+                riskLevel: a.riskLevel,
+                metadataHash: a.metadataHash,
+                atBlock: a.atBlock
+            });
+        }
+    }
+
+    function getAssessmentsByPhase(uint8 phaseId, uint256 offset, uint256 limit) external view returns (uint256[] memory ids) {
+        if (phaseId >= BCH_MAX_PHASES) return new uint256[](0);
+        uint256[] memory matching = new uint256[](_allAssessmentIds.length);
+        uint256 count = 0;
+        for (uint256 i = 0; i < _allAssessmentIds.length; i++) {
+            if (assessments[_allAssessmentIds[i]].phaseId == phaseId) {
+                matching[count] = _allAssessmentIds[i];
+                count++;
+            }
+        }
+        if (offset >= count) return new uint256[](0);
+        uint256 end = offset + limit;
+        if (end > count) end = count;
+        uint256 n = end - offset;
+        ids = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) ids[i] = matching[offset + i];
+        return ids;
+    }
+
+    function getRiskLevelCounts(uint8 phaseId) external view returns (uint256[] memory counts) {
+        counts = new uint256[](BCH_MAX_RISK_LEVEL + 1);
+        for (uint256 i = 0; i < _allAssessmentIds.length; i++) {
