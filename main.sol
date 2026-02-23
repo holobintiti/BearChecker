@@ -718,3 +718,27 @@ contract BearChecker is ReentrancyGuard, Ownable {
 // INTEGRATION: Deploy with no constructor args. Optionally set submissionFeeWei, setKeeper, setOracle. Users submit assessments with
 // phaseId (0=unknown/other, 1=accumulation, 2=markup, 3=distribution, 4=markdown), bearScore 0-10000, riskLevel 0-10. Keeper configures
 // phase thresholds so computePhaseFromScore can classify scores. Treasury receives submission fees and any sent ETH via receive().
+//
+// SECURITY: ReentrancyGuard on submit and withdraw. No delegatecall. Immutable treasury and oracle role address. Owner can pause.
+//
+// GAS: Batch submit (submitAssessmentBatch) and batch views (getAssessmentsBatch, getAssessmentFullViewBatch) reduce calls.
+//
+// WRITE: submitAssessment(phaseId, bearScore, riskLevel, metadataHash) payable | submitAssessmentBatch(phaseIds, bearScores, riskLevels, metadataHashes) payable
+//        setPhaseThreshold(phaseId, minScore, maxScore) keeper | setPaused(paused) owner | setKeeper(newKeeper) owner | setOracle(newOracle) owner
+//        setSubmissionFeeWei(newFeeWei) owner | withdrawTreasury() owner or bchTreasury
+// VIEW: getAssessment(id) | getAssessmentsBatch(ids) | getLatestAssessments(count) | getAverageBearScore() | getAverageBearScoreByPhase(phaseId)
+//       getSubmitterStats(submitter) | getPhaseStats(phaseId) | getAssessmentCountByPhaseBatch(phaseIds) | getAssessmentsPaginated(offset, limit)
+//       getAssessmentsInBlockRange(fromBlock, toBlock) | getGlobalStats() | getTreasuryBalance() | isPaused() | currentBlockNumber()
+//       getPhaseThresholdsBatch(phaseIds) | getAssessmentFullView(id) | getAssessmentFullViewBatch(ids) | getAssessmentsByPhase(phaseId, offset, limit)
+//       getRiskLevelCounts(phaseId) | computePhaseFromScore(bearScore) | getSubmitterAssessmentCount(submitter) | getAssessmentExists(id)
+//       getScoreStats() | getPhaseSummary() | getAssessmentSlice(offset, limit) | getConfigSnapshot()
+// ORACLE: recordCycleSnapshot(phaseId, aggregateBearScore) | getCycleSnapshot(index) | getCycleSnapshotCount() | getCycleSnapshotsPaginated(offset, limit) | getLatestCycleSnapshot()
+//
+// Market cycle phases: Accumulation (1), Markup (2), Distribution (3), Markdown (4). Phase 0 = unset/other. Keeper sets score bounds per phase.
+// Bear score 0 = no bearishness, 10000 = maximum. Risk level 0-10 for optional classification. metadataHash can be keccak256 of JSON or off-chain id.
+// Submitters pay submissionFeeWei (if set) per assessment; ETH accrues to treasuryBalance. withdrawTreasury() sends balance to bchTreasury.
+// getPhaseSummary() returns per-phase count, sumScore, min, max, configured. getScoreStats() returns global sum, count, min, max.
+// getAssessmentsByPhase(phaseId, offset, limit) returns assessment ids in that phase. getRiskLevelCounts(phaseId) returns count per risk level 0..10.
+// Oracle can recordCycleSnapshot to store aggregate view (phase + score) for historical lookup. getLatestCycleSnapshot() for current.
+// All constructor addresses and BCH_CYCLE_SEED are unique and must not be reused on other deployments.
+
