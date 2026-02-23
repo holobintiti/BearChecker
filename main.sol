@@ -250,3 +250,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
             atBlock: block.number
         }));
         emit CycleSnapshotRecorded(_cycleSnapshots.length - 1, phaseId, aggregateBearScore, block.number);
+    }
+
+    function withdrawTreasury() external nonReentrant {
+        if (msg.sender != owner() && msg.sender != bchTreasury) revert BCH_ZeroAddress();
+        uint256 amount = treasuryBalance;
+        if (amount == 0) revert BCH_ZeroAmount();
+        treasuryBalance = 0;
+        (bool sent,) = bchTreasury.call{value: amount}("");
+        if (!sent) revert BCH_TransferFailed();
+        emit TreasuryWithdrawn(bchTreasury, amount, block.number);
+    }
+
+    /// @param assessmentId Assessment id.
+    /// @return submitter Submitter address.
+    /// @return phaseId Phase index.
+    /// @return bearScore Bear score 0..BCH_SCORE_SCALE.
+    /// @return riskLevel Risk level 0..BCH_MAX_RISK_LEVEL.
+    /// @return metadataHash Optional metadata hash.
+    /// @return atBlock Block when submitted.
+    function getAssessment(uint256 assessmentId) external view returns (
+        address submitter,
+        uint8 phaseId,
+        uint256 bearScore,
+        uint8 riskLevel,
+        bytes32 metadataHash,
+        uint256 atBlock
+    ) {
+        CycleAssessment storage a = assessments[assessmentId];
+        if (a.atBlock == 0) revert BCH_AssessmentNotFound();
+        return (a.submitter, a.phaseId, a.bearScore, a.riskLevel, a.metadataHash, a.atBlock);
+    }
+
+    function getAssessmentIdsBySubmitter(address submitter) external view returns (uint256[] memory) {
+        return assessmentIdsBySubmitter[submitter];
+    }
+
