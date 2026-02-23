@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+/**
+ * @title BearChecker
+ * @notice On-chain toolkit for recording and querying market-cycle assessments. Submitters post phase, bear score, and risk level; keeper configures phase thresholds. Treasury receives optional fees. No off-chain data; all inputs are explicit.
+ * @dev Treasury, keeper, and oracle addresses are set in the constructor and are immutable. ReentrancyGuard on all state-changing and payable paths.
+ */
+
+import "https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-contracts/v4.9.6/contracts/security/ReentrancyGuard.sol";
+import "https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-contracts/v4.9.6/contracts/access/Ownable.sol";
+
+contract BearChecker is ReentrancyGuard, Ownable {
+
+    event CycleAssessmentSubmitted(
+        uint256 indexed assessmentId,
+        address indexed submitter,
+        uint8 phaseId,
+        uint256 bearScore,
+        uint8 riskLevel,
+        bytes32 metadataHash,
+        uint256 atBlock
+    );
+    event PhaseThresholdSet(uint8 indexed phaseId, uint256 minScore, uint256 maxScore, uint256 atBlock);
+    event BearScoreRecorded(uint256 indexed assessmentId, uint256 bearScore, uint8 riskLevel, uint256 atBlock);
+    event TreasuryTopped(uint256 amountWei, address indexed from, uint256 atBlock);
+    event TreasuryWithdrawn(address indexed to, uint256 amountWei, uint256 atBlock);
+    event PauseToggled(bool paused);
+    event KeeperUpdated(address indexed previous, address indexed current);
+    event OracleUpdated(address indexed previous, address indexed current);
+    event SubmissionFeeSet(uint256 previousWei, uint256 newWei);
+    event CycleSnapshotRecorded(uint256 indexed snapshotIndex, uint8 phaseId, uint256 aggregateBearScore, uint256 atBlock);
+
+    error BCH_ZeroAddress();
+    error BCH_ZeroAmount();
+    error BCH_Paused();
