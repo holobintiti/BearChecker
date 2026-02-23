@@ -142,3 +142,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
     function setOracle(address newOracle) external onlyOwner {
         if (newOracle == address(0)) revert BCH_ZeroAddress();
         address prev = bchOracle;
+        bchOracle = newOracle;
+        emit OracleUpdated(prev, newOracle);
+    }
+
+    function setSubmissionFeeWei(uint256 newFeeWei) external onlyOwner {
+        uint256 prev = submissionFeeWei;
+        submissionFeeWei = newFeeWei;
+        emit SubmissionFeeSet(prev, newFeeWei);
+    }
+
+    /// @notice Set score bounds for a phase (keeper only). Used for cycle classification.
+    function setPhaseThreshold(uint8 phaseId, uint256 minScore, uint256 maxScore) external onlyKeeper {
+        if (phaseId >= BCH_MAX_PHASES) revert BCH_InvalidPhase();
+        if (minScore > maxScore || maxScore > BCH_SCORE_SCALE) revert BCH_ThresholdInvalid();
+        phaseThresholds[phaseId] = PhaseThreshold({ minScore: minScore, maxScore: maxScore, configured: true });
+        emit PhaseThresholdSet(phaseId, minScore, maxScore, block.number);
+    }
+
+    /// @notice Submit a single market-cycle assessment. Optional fee sent to treasury.
+    /// @param phaseId Phase index 0..BCH_MAX_PHASES-1 (e.g. BCH_PHASE_ACCUMULATION, BCH_PHASE_MARKDOWN).
+    /// @param bearScore Bear score 0..BCH_SCORE_SCALE (10000 = max bearish).
+    /// @param riskLevel Risk level 0..BCH_MAX_RISK_LEVEL.
+    /// @param metadataHash Optional keccak256 of off-chain metadata.
+    /// @return assessmentId Id of the created assessment.
+    function submitAssessment(
+        uint8 phaseId,
+        uint256 bearScore,
+        uint8 riskLevel,
+        bytes32 metadataHash
+    ) external payable whenNotPaused nonReentrant returns (uint256 assessmentId) {
+        _validatePhaseAndScore(phaseId, bearScore, riskLevel);
+        if (msg.value < submissionFeeWei) revert BCH_InsufficientFee();
+        if (assessmentIdsBySubmitter[msg.sender].length >= BCH_MAX_ASSESSMENTS_PER_SUBMITTER) revert BCH_MaxAssessmentsPerSubmitter();
+
+        if (msg.value > 0) {
+            treasuryBalance += msg.value;
