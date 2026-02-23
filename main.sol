@@ -286,3 +286,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
         return assessmentIdsBySubmitter[submitter];
     }
 
+    function getAllAssessmentIds() external view returns (uint256[] memory) {
+        return _allAssessmentIds;
+    }
+
+    /// @param phaseId Phase index 0..BCH_MAX_PHASES-1.
+    /// @return minScore Minimum score for this phase (configured by keeper).
+    /// @return maxScore Maximum score for this phase.
+    /// @return configured Whether threshold was set.
+    function getPhaseThreshold(uint8 phaseId) external view returns (uint256 minScore, uint256 maxScore, bool configured) {
+        PhaseThreshold storage pt = phaseThresholds[phaseId];
+        return (pt.minScore, pt.maxScore, pt.configured);
+    }
+
+    function getConfigSnapshot() external view returns (
+        address bchTreasury_,
+        address bchKeeper_,
+        address bchOracle_,
+        uint256 deployBlock_,
+        uint256 submissionFeeWei_,
+        uint256 assessmentCounter_,
+        uint256 treasuryBalance_,
+        bool bchPaused_
+    ) {
+        return (
+            bchTreasury,
+            bchKeeper,
+            bchOracle,
+            deployBlock,
+            submissionFeeWei,
+            assessmentCounter,
+            treasuryBalance,
+            bchPaused
+        );
+    }
+
+    function getAssessmentsBatch(uint256[] calldata assessmentIds) external view returns (
