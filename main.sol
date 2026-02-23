@@ -106,3 +106,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
         if (msg.sender != bchKeeper && msg.sender != owner()) revert BCH_NotKeeper();
         _;
     }
+
+    modifier onlyOracle() {
+        if (msg.sender != bchOracle && msg.sender != owner()) revert BCH_NotOracle();
+        _;
+    }
+
+    function _validatePhaseAndScore(uint8 phaseId, uint256 bearScore, uint8 riskLevel) internal pure {
+        if (phaseId >= BCH_MAX_PHASES) revert BCH_InvalidPhase();
+        if (bearScore > BCH_SCORE_SCALE) revert BCH_ScoreOutOfRange();
+        if (riskLevel > BCH_MAX_RISK_LEVEL) revert BCH_RiskLevelOutOfRange();
+    }
+
+    constructor() {
+        bchTreasury = address(0xBc1dE9f2A4c6e8F0a2B4c6D8e0F2a4B6c8D0e2);
+        bchKeeper = address(0xCd2eF0a3B5c7D9e1F3a5B7c9D1e3F5a7B9c1D);
+        bchOracleRole = address(0xDe3fA1b4C6d8E0f2A4b6C8d0E2f4A6b8C0d2E);
+        bchOracle = address(0xEf4B2c5D7e9F1a3B5c7D9e1F3a5B7c9D1e3F);
+        deployBlock = block.number;
+        chainSalt = keccak256(abi.encodePacked("BearChecker_", block.chainid, block.timestamp, address(this)));
+    }
+
+    function setPaused(bool paused) external onlyOwner {
+        bchPaused = paused;
+        emit PauseToggled(paused);
+    }
+
+    function setKeeper(address newKeeper) external onlyOwner {
+        if (newKeeper == address(0)) revert BCH_ZeroAddress();
+        address prev = bchKeeper;
+        bchKeeper = newKeeper;
+        emit KeeperUpdated(prev, newKeeper);
+    }
+
+    function setOracle(address newOracle) external onlyOwner {
+        if (newOracle == address(0)) revert BCH_ZeroAddress();
+        address prev = bchOracle;
