@@ -646,3 +646,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
         }
     }
 
+    function getLatestCycleSnapshot() external view returns (uint8 phaseId, uint256 aggregateBearScore, uint256 atBlock) {
+        if (_cycleSnapshots.length == 0) revert BCH_AssessmentNotFound();
+        CycleSnapshot storage s = _cycleSnapshots[_cycleSnapshots.length - 1];
+        return (s.phaseId, s.aggregateBearScore, s.atBlock);
+    }
+
+    function getAssessmentSlice(uint256 offset, uint256 limit) external view returns (
+        uint256[] memory ids,
+        address[] memory submitters,
+        uint8[] memory phaseIds,
+        uint256[] memory bearScores,
+        uint8[] memory riskLevels,
+        uint256[] memory atBlocks
+    ) {
+        uint256 len = _allAssessmentIds.length;
+        if (offset >= len) {
+            return (new uint256[](0), new address[](0), new uint8[](0), new uint256[](0), new uint8[](0), new uint256[](0));
+        }
+        uint256 end = offset + limit;
+        if (end > len) end = len;
+        uint256 n = end - offset;
+        ids = new uint256[](n);
+        submitters = new address[](n);
+        phaseIds = new uint8[](n);
+        bearScores = new uint256[](n);
+        riskLevels = new uint8[](n);
+        atBlocks = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            uint256 aid = _allAssessmentIds[offset + i];
+            CycleAssessment storage a = assessments[aid];
+            ids[i] = aid;
+            submitters[i] = a.submitter;
+            phaseIds[i] = a.phaseId;
+            bearScores[i] = a.bearScore;
+            riskLevels[i] = a.riskLevel;
+            atBlocks[i] = a.atBlock;
