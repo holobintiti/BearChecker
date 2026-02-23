@@ -358,3 +358,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
         if (len == 0) return (new uint256[](0), new address[](0), new uint8[](0), new uint256[](0), new uint8[](0));
         if (count > len) count = len;
         ids = new uint256[](count);
+        submitters = new address[](count);
+        phaseIds = new uint8[](count);
+        bearScores = new uint256[](count);
+        riskLevels = new uint8[](count);
+        for (uint256 i = 0; i < count; i++) {
+            uint256 aid = _allAssessmentIds[len - 1 - i];
+            CycleAssessment storage a = assessments[aid];
+            ids[i] = aid;
+            submitters[i] = a.submitter;
+            phaseIds[i] = a.phaseId;
+            bearScores[i] = a.bearScore;
+            riskLevels[i] = a.riskLevel;
+        }
+    }
+
+    function getAverageBearScore() external view returns (uint256 average, uint256 count) {
+        count = _allAssessmentIds.length;
+        if (count == 0) return (0, 0);
+        uint256 sum = 0;
+        for (uint256 i = 0; i < count; i++) {
+            sum += assessments[_allAssessmentIds[i]].bearScore;
+        }
+        average = sum / count;
+        return (average, count);
+    }
+
+    function getAverageBearScoreByPhase(uint8 phaseId) external view returns (uint256 average, uint256 count) {
+        if (phaseId >= BCH_MAX_PHASES) return (0, 0);
+        count = 0;
+        uint256 sum = 0;
+        for (uint256 i = 0; i < _allAssessmentIds.length; i++) {
+            CycleAssessment storage a = assessments[_allAssessmentIds[i]];
+            if (a.phaseId == phaseId) {
+                sum += a.bearScore;
+                count++;
+            }
