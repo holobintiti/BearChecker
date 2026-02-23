@@ -466,3 +466,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
     ) {
         uint256 n = phaseIds.length;
         minScores = new uint256[](n);
+        maxScores = new uint256[](n);
+        configured = new bool[](n);
+        for (uint256 i = 0; i < n; i++) {
+            PhaseThreshold storage pt = phaseThresholds[phaseIds[i]];
+            minScores[i] = pt.minScore;
+            maxScores[i] = pt.maxScore;
+            configured[i] = pt.configured;
+        }
+    }
+
+    struct AssessmentView {
+        uint256 assessmentId;
+        address submitter;
+        uint8 phaseId;
+        uint256 bearScore;
+        uint8 riskLevel;
+        bytes32 metadataHash;
+        uint256 atBlock;
+    }
+
+    function getAssessmentFullView(uint256 assessmentId) external view returns (AssessmentView memory v) {
+        CycleAssessment storage a = assessments[assessmentId];
+        if (a.atBlock == 0) revert BCH_AssessmentNotFound();
+        v.assessmentId = assessmentId;
+        v.submitter = a.submitter;
+        v.phaseId = a.phaseId;
+        v.bearScore = a.bearScore;
+        v.riskLevel = a.riskLevel;
+        v.metadataHash = a.metadataHash;
+        v.atBlock = a.atBlock;
+    }
+
+    function getAssessmentFullViewBatch(uint256[] calldata assessmentIds) external view returns (AssessmentView[] memory views) {
+        uint256 n = assessmentIds.length;
+        views = new AssessmentView[](n);
+        for (uint256 i = 0; i < n; i++) {
