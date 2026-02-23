@@ -178,3 +178,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
 
         if (msg.value > 0) {
             treasuryBalance += msg.value;
+            emit TreasuryTopped(msg.value, msg.sender, block.number);
+        }
+
+        assessmentCounter++;
+        assessmentId = assessmentCounter;
+        assessments[assessmentId] = CycleAssessment({
+            submitter: msg.sender,
+            phaseId: phaseId,
+            bearScore: bearScore,
+            riskLevel: riskLevel,
+            metadataHash: metadataHash,
+            atBlock: block.number
+        });
+        assessmentIdsBySubmitter[msg.sender].push(assessmentId);
+        assessmentCountByPhase[phaseId]++;
+        _allAssessmentIds.push(assessmentId);
+
+        emit CycleAssessmentSubmitted(assessmentId, msg.sender, phaseId, bearScore, riskLevel, metadataHash, block.number);
+        emit BearScoreRecorded(assessmentId, bearScore, riskLevel, block.number);
+        return assessmentId;
+    }
+
+    function submitAssessmentBatch(
+        uint8[] calldata phaseIds,
+        uint256[] calldata bearScores,
+        uint8[] calldata riskLevels,
+        bytes32[] calldata metadataHashes
+    ) external payable whenNotPaused nonReentrant returns (uint256[] memory assessmentIds) {
+        uint256 n = phaseIds.length;
+        if (n == 0 || bearScores.length != n || riskLevels.length != n || metadataHashes.length != n) revert BCH_ThresholdInvalid();
+        if (assessmentIdsBySubmitter[msg.sender].length + n > BCH_MAX_ASSESSMENTS_PER_SUBMITTER) revert BCH_MaxAssessmentsPerSubmitter();
+        uint256 requiredFee = submissionFeeWei * n;
+        if (msg.value < requiredFee) revert BCH_InsufficientFee();
+
+        if (msg.value > 0) {
+            treasuryBalance += msg.value;
