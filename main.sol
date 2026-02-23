@@ -430,3 +430,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
         for (uint256 i = 0; i < n; i++) ids[i] = _allAssessmentIds[offset + i];
         return ids;
     }
+
+    function getAssessmentsInBlockRange(uint256 fromBlock, uint256 toBlock) external view returns (uint256[] memory ids) {
+        uint256 len = _allAssessmentIds.length;
+        uint256 count = 0;
+        for (uint256 i = 0; i < len; i++) {
+            uint256 ab = assessments[_allAssessmentIds[i]].atBlock;
+            if (ab >= fromBlock && ab <= toBlock) count++;
+        }
+        ids = new uint256[](count);
+        uint256 j = 0;
+        for (uint256 i = 0; i < len; i++) {
+            uint256 aid = _allAssessmentIds[i];
+            uint256 ab = assessments[aid].atBlock;
+            if (ab >= fromBlock && ab <= toBlock) {
+                ids[j] = aid;
+                j++;
+            }
+        }
+        return ids;
+    }
+
+    function getGlobalStats() external view returns (uint256 totalAssessments, uint256 totalTreasury, uint256 allIdsLength) {
+        return (assessmentCounter, treasuryBalance, _allAssessmentIds.length);
+    }
+
+    function getTreasuryBalance() external view returns (uint256) { return treasuryBalance; }
+    function isPaused() external view returns (bool) { return bchPaused; }
+    function currentBlockNumber() external view returns (uint256) { return block.number; }
+
+    function getPhaseThresholdsBatch(uint8[] calldata phaseIds) external view returns (
+        uint256[] memory minScores,
+        uint256[] memory maxScores,
+        bool[] memory configured
+    ) {
+        uint256 n = phaseIds.length;
+        minScores = new uint256[](n);
