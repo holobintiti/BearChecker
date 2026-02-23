@@ -574,3 +574,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
             if (s > maxScore) maxScore = s;
         }
     }
+
+    struct PhaseSummaryEntry {
+        uint8 phaseId;
+        uint256 count;
+        uint256 sumScore;
+        uint256 minScore;
+        uint256 maxScore;
+        bool configured;
+    }
+
+    function getPhaseSummary() external view returns (PhaseSummaryEntry[] memory entries) {
+        entries = new PhaseSummaryEntry[](BCH_MAX_PHASES);
+        uint256[] memory sumByPhase = new uint256[](BCH_MAX_PHASES);
+        uint256[] memory minByPhase = new uint256[](BCH_MAX_PHASES);
+        uint256[] memory maxByPhase = new uint256[](BCH_MAX_PHASES);
+        for (uint256 p = 0; p < BCH_MAX_PHASES; p++) {
+            minByPhase[p] = BCH_SCORE_SCALE + 1;
+            maxByPhase[p] = 0;
+        }
+        for (uint256 i = 0; i < _allAssessmentIds.length; i++) {
+            CycleAssessment storage a = assessments[_allAssessmentIds[i]];
+            uint8 p = a.phaseId;
+            if (p < BCH_MAX_PHASES) {
+                sumByPhase[p] += a.bearScore;
+                if (a.bearScore < minByPhase[p]) minByPhase[p] = a.bearScore;
+                if (a.bearScore > maxByPhase[p]) maxByPhase[p] = a.bearScore;
+            }
+        }
+        for (uint8 p = 0; p < BCH_MAX_PHASES; p++) {
+            PhaseThreshold storage pt = phaseThresholds[p];
+            entries[p] = PhaseSummaryEntry({
+                phaseId: p,
+                count: assessmentCountByPhase[p],
+                sumScore: sumByPhase[p],
+                minScore: assessmentCountByPhase[p] == 0 ? 0 : minByPhase[p],
+                maxScore: assessmentCountByPhase[p] == 0 ? 0 : maxByPhase[p],
