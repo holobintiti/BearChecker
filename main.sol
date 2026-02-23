@@ -394,3 +394,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
                 sum += a.bearScore;
                 count++;
             }
+        }
+        if (count == 0) return (0, 0);
+        average = sum / count;
+        return (average, count);
+    }
+
+    function getSubmitterStats(address submitter) external view returns (uint256 count, uint256[] memory ids) {
+        ids = assessmentIdsBySubmitter[submitter];
+        count = ids.length;
+        return (count, ids);
+    }
+
+    function getPhaseStats(uint8 phaseId) external view returns (uint256 count, uint256 minScore, uint256 maxScore, bool configured) {
+        if (phaseId >= BCH_MAX_PHASES) return (0, 0, 0, false);
+        PhaseThreshold storage pt = phaseThresholds[phaseId];
+        return (assessmentCountByPhase[phaseId], pt.minScore, pt.maxScore, pt.configured);
+    }
+
+    function getAssessmentCountByPhaseBatch(uint8[] calldata phaseIds) external view returns (uint256[] memory counts) {
+        uint256 n = phaseIds.length;
+        counts = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            if (phaseIds[i] < BCH_MAX_PHASES) counts[i] = assessmentCountByPhase[phaseIds[i]];
+        }
+    }
+
+    function getAssessmentsPaginated(uint256 offset, uint256 limit) external view returns (uint256[] memory ids) {
+        uint256 len = _allAssessmentIds.length;
+        if (offset >= len) return new uint256[](0);
+        uint256 end = offset + limit;
+        if (end > len) end = len;
+        uint256 n = end - offset;
+        ids = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) ids[i] = _allAssessmentIds[offset + i];
+        return ids;
+    }
