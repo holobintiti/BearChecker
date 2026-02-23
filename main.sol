@@ -610,3 +610,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
                 sumScore: sumByPhase[p],
                 minScore: assessmentCountByPhase[p] == 0 ? 0 : minByPhase[p],
                 maxScore: assessmentCountByPhase[p] == 0 ? 0 : maxByPhase[p],
+                configured: pt.configured
+            });
+        }
+    }
+
+    function getCycleSnapshot(uint256 index) external view returns (uint8 phaseId, uint256 aggregateBearScore, uint256 atBlock) {
+        if (index >= _cycleSnapshots.length) revert BCH_AssessmentNotFound();
+        CycleSnapshot storage s = _cycleSnapshots[index];
+        return (s.phaseId, s.aggregateBearScore, s.atBlock);
+    }
+
+    function getCycleSnapshotCount() external view returns (uint256) {
+        return _cycleSnapshots.length;
+    }
+
+    function getCycleSnapshotsPaginated(uint256 offset, uint256 limit) external view returns (
+        uint8[] memory phaseIds,
+        uint256[] memory aggregateBearScores,
+        uint256[] memory atBlocks
+    ) {
+        uint256 len = _cycleSnapshots.length;
+        if (offset >= len) return (new uint8[](0), new uint256[](0), new uint256[](0));
+        uint256 end = offset + limit;
+        if (end > len) end = len;
+        uint256 n = end - offset;
+        phaseIds = new uint8[](n);
+        aggregateBearScores = new uint256[](n);
+        atBlocks = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            CycleSnapshot storage s = _cycleSnapshots[offset + i];
+            phaseIds[i] = s.phaseId;
+            aggregateBearScores[i] = s.aggregateBearScore;
+            atBlocks[i] = s.atBlock;
+        }
+    }
+
