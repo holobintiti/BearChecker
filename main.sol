@@ -214,3 +214,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
 
         if (msg.value > 0) {
             treasuryBalance += msg.value;
+            emit TreasuryTopped(msg.value, msg.sender, block.number);
+        }
+
+        assessmentIds = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            _validatePhaseAndScore(phaseIds[i], bearScores[i], riskLevels[i]);
+
+            assessmentCounter++;
+            uint256 aid = assessmentCounter;
+            assessments[aid] = CycleAssessment({
+                submitter: msg.sender,
+                phaseId: phaseIds[i],
+                bearScore: bearScores[i],
+                riskLevel: riskLevels[i],
+                metadataHash: metadataHashes[i],
+                atBlock: block.number
+            });
+            assessmentIdsBySubmitter[msg.sender].push(aid);
+            assessmentCountByPhase[phaseIds[i]]++;
+            _allAssessmentIds.push(aid);
+            assessmentIds[i] = aid;
+            emit CycleAssessmentSubmitted(aid, msg.sender, phaseIds[i], bearScores[i], riskLevels[i], metadataHashes[i], block.number);
+        }
+        return assessmentIds;
+    }
+
+    /// @notice Withdraw treasury balance to bchTreasury. Callable by owner or bchTreasury.
+    function recordCycleSnapshot(uint8 phaseId, uint256 aggregateBearScore) external onlyOracle whenNotPaused {
+        if (phaseId >= BCH_MAX_PHASES) revert BCH_InvalidPhase();
+        if (aggregateBearScore > BCH_SCORE_SCALE) revert BCH_ScoreOutOfRange();
+        _cycleSnapshots.push(CycleSnapshot({
+            phaseId: phaseId,
+            aggregateBearScore: aggregateBearScore,
+            atBlock: block.number
+        }));
+        emit CycleSnapshotRecorded(_cycleSnapshots.length - 1, phaseId, aggregateBearScore, block.number);
