@@ -70,3 +70,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
 
     struct CycleAssessment {
         address submitter;
+        uint8 phaseId;
+        uint256 bearScore;
+        uint8 riskLevel;
+        bytes32 metadataHash;
+        uint256 atBlock;
+    }
+
+    struct PhaseThreshold {
+        uint256 minScore;
+        uint256 maxScore;
+        bool configured;
+    }
+
+    mapping(uint256 => CycleAssessment) public assessments;
+    mapping(address => uint256[]) public assessmentIdsBySubmitter;
+    mapping(uint8 => PhaseThreshold) public phaseThresholds;
+    mapping(uint8 => uint256) public assessmentCountByPhase;
+
+    struct CycleSnapshot {
+        uint8 phaseId;
+        uint256 aggregateBearScore;
+        uint256 atBlock;
+    }
+    CycleSnapshot[] private _cycleSnapshots;
+
+    uint256[] private _allAssessmentIds;
+
+    modifier whenNotPaused() {
+        if (bchPaused) revert BCH_Paused();
+        _;
+    }
+
+    modifier onlyKeeper() {
+        if (msg.sender != bchKeeper && msg.sender != owner()) revert BCH_NotKeeper();
+        _;
+    }
