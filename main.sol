@@ -538,3 +538,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
     function getRiskLevelCounts(uint8 phaseId) external view returns (uint256[] memory counts) {
         counts = new uint256[](BCH_MAX_RISK_LEVEL + 1);
         for (uint256 i = 0; i < _allAssessmentIds.length; i++) {
+            CycleAssessment storage a = assessments[_allAssessmentIds[i]];
+            if (phaseId >= BCH_MAX_PHASES || a.phaseId == phaseId) {
+                if (a.riskLevel <= BCH_MAX_RISK_LEVEL) counts[a.riskLevel]++;
+            }
+        }
+    }
+
+    function computePhaseFromScore(uint256 bearScore) external view returns (uint8 phaseId) {
+        for (uint8 p = 0; p < BCH_MAX_PHASES; p++) {
+            PhaseThreshold storage pt = phaseThresholds[p];
+            if (pt.configured && bearScore >= pt.minScore && bearScore <= pt.maxScore) return p;
+        }
+        return 0;
+    }
+
+    function getSubmitterAssessmentCount(address submitter) external view returns (uint256) {
+        return assessmentIdsBySubmitter[submitter].length;
+    }
+
+    function getAssessmentExists(uint256 assessmentId) external view returns (bool) {
+        return assessmentId > 0 && assessmentId <= assessmentCounter && assessments[assessmentId].atBlock != 0;
+    }
+
+    function getScoreStats() external view returns (uint256 sum, uint256 count, uint256 minScore, uint256 maxScore) {
+        count = _allAssessmentIds.length;
+        if (count == 0) return (0, 0, 0, 0);
+        sum = 0;
+        minScore = BCH_SCORE_SCALE + 1;
+        maxScore = 0;
+        for (uint256 i = 0; i < count; i++) {
+            uint256 s = assessments[_allAssessmentIds[i]].bearScore;
+            sum += s;
+            if (s < minScore) minScore = s;
+            if (s > maxScore) maxScore = s;
+        }
+    }
