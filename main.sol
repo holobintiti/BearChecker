@@ -682,3 +682,39 @@ contract BearChecker is ReentrancyGuard, Ownable {
             bearScores[i] = a.bearScore;
             riskLevels[i] = a.riskLevel;
             atBlocks[i] = a.atBlock;
+        }
+    }
+
+    receive() external payable {
+        if (msg.value > 0) {
+            treasuryBalance += msg.value;
+            emit TreasuryTopped(msg.value, msg.sender, block.number);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// BearChecker — Market cycle assessment toolkit (reference)
+// -----------------------------------------------------------------------------
+// ROLES: bchTreasury (immutable) receives withdrawals. bchKeeper (updatable) sets phase thresholds. bchOracle (updatable) for future use.
+// PHASES: 0..BCH_MAX_PHASES-1. Constants BCH_PHASE_ACCUMULATION=1, BCH_PHASE_MARKUP=2, BCH_PHASE_DISTRIBUTION=3, BCH_PHASE_MARKDOWN=4.
+// BEAR SCORE: 0..BCH_SCORE_SCALE (10000). Higher = more bearish. Risk level 0..BCH_MAX_RISK_LEVEL (10).
+// SUBMISSION: submitAssessment(phaseId, bearScore, riskLevel, metadataHash) payable; optional submissionFeeWei. submitAssessmentBatch for multiple.
+// THRESHOLDS: setPhaseThreshold(phaseId, minScore, maxScore) keeper only. computePhaseFromScore(bearScore) returns matching phase.
+// VIEWS: getAssessment, getAssessmentsBatch, getLatestAssessments, getAverageBearScore, getAverageBearScoreByPhase, getSubmitterStats,
+//   getPhaseStats, getAssessmentCountByPhaseBatch, getAssessmentsPaginated, getAssessmentsInBlockRange, getAssessmentsByPhase,
+//   getRiskLevelCounts, getScoreStats, getAssessmentFullView, getAssessmentFullViewBatch, getPhaseThresholdsBatch,
+//   getGlobalStats, getTreasuryBalance, isPaused, currentBlockNumber, getSubmitterAssessmentCount, getAssessmentExists.
+// CONSTRUCTOR ADDRESSES (unique, do not reuse):
+//   bchTreasury  = 0xBc1dE9f2A4c6e8F0a2B4c6D8e0F2a4B6c8D0e2
+//   bchKeeper    = 0xCd2eF0a3B5c7D9e1F3a5B7c9D1e3F5a7B9c1D
+//   bchOracleRole = 0xDe3fA1b4C6d8E0f2A4b6C8d0E2f4A6b8C0d2E
+//   bchOracle   = 0xEf4B2c5D7e9F1a3B5c7D9e1F3a5B7c9D1e3F
+// BCH_CYCLE_SEED = 0xBe4c5d7e9f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f
+// ERRORS: BCH_ZeroAddress, BCH_ZeroAmount, BCH_Paused, BCH_NotKeeper, BCH_NotOracle, BCH_InvalidPhase, BCH_ScoreOutOfRange,
+//   BCH_RiskLevelOutOfRange, BCH_TransferFailed, BCH_AssessmentNotFound, BCH_InsufficientFee, BCH_ThresholdInvalid, BCH_MaxAssessmentsPerSubmitter.
+// -----------------------------------------------------------------------------
+//
+// INTEGRATION: Deploy with no constructor args. Optionally set submissionFeeWei, setKeeper, setOracle. Users submit assessments with
+// phaseId (0=unknown/other, 1=accumulation, 2=markup, 3=distribution, 4=markdown), bearScore 0-10000, riskLevel 0-10. Keeper configures
+// phase thresholds so computePhaseFromScore can classify scores. Treasury receives submission fees and any sent ETH via receive().
